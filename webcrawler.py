@@ -7,13 +7,10 @@ from html.parser import HTMLParser
 from urllib.parse import urlparse
 import os
 import shutil
+import argparse
 
-# Patrón regex para coincidir con una URL
+# Regex pattern to match a URL
 HTTP_URL_PATTERN = r"^http[s]*://.+"
-
-# Definir el dominio raíz para rastrear
-domain = "udc.es"
-full_url = "https://udc.es/es/goberno/"
 
 
 class HyperlinkParser(HTMLParser):
@@ -93,7 +90,7 @@ def crawl(url, max_depth=1):
 
     while queue:
         url, depth = queue.popleft()
-        print(f"Rastreando {url} en profundidad {depth}")
+        print(f"Crawling {url} at depth {depth}")
 
         if depth > max_depth:
             continue
@@ -102,18 +99,18 @@ def crawl(url, max_depth=1):
             response = requests.get(url)
             html_content = response.text
 
-            # Extraer el contenido principal usando BeautifulSoup
+            # Extract the main content using BeautifulSoup
             soup = BeautifulSoup(html_content, "html.parser")
             main_content = soup.find("main") or soup.find("body")
 
             if main_content:
                 combined_content += f"<h2>{url}</h2>"
                 combined_content += str(main_content)
-                print(f"Contenido HTML agregado de: {url}")
+                print(f"HTML content added from: {url}")
             else:
-                print(f"No se pudo extraer el contenido HTML principal de {url}")
+                print(f"Could not extract main HTML content from {url}")
         except Exception as e:
-            print(f"Error al procesar {url}: {str(e)}")
+            print(f"Error processing {url}: {str(e)}")
 
         if depth < max_depth:
             for link in get_domain_hyperlinks(local_domain, url, base_path):
@@ -123,12 +120,21 @@ def crawl(url, max_depth=1):
 
     combined_content += "</body></html>"
 
-    # Guardar todo el contenido combinado en un solo archivo HTML
+    # Save all combined content in a single HTML file
     output_file = "processed/combined_content.html"
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(combined_content)
-    print(f"Se ha creado el archivo HTML combinado: {output_file}")
+    print(f"Combined HTML file has been created: {output_file}")
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Web Crawler")
+    parser.add_argument(
+        "--url", default="https://udc.es/es/goberno/", help="Full URL to crawl"
+    )
+    args = parser.parse_args()
+
+    full_url = args.url
+    domain = urlparse(full_url).netloc
+
     crawl(full_url, max_depth=1)
